@@ -5,6 +5,11 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
+interface IMerchantMarketplace {
+    function marketplaceFee()  external returns  (uint256);
+}
+
+
 library ProductTypes {
     enum ProductType { SINGLE, BULK, GROUP_BUYING }
     enum PurchaseStatus { PENDING, COMPLETED, REFUNDED, EXPIRED }
@@ -104,10 +109,9 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
         _;
     }
 
-    constructor(address _owner, address _marketplace) {
-        _transferOwnership(_owner);
+    constructor(address _owner, address _marketplace)  Ownable(_owner) {
         marketplace = _marketplace;
-        _pause(); // Start paused for safety
+        
     }
 
     // Product Management
@@ -173,15 +177,15 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
         uint256 totalAmount = uint256(product.price)*  quantity;
         require(msg.value >= totalAmount, "Insufficient payment");
 
-        uint256 fee = totalAmount * MerchantMarketplace(marketplace).marketplaceFee() /  10000;
-        uint256 merchantAmount = totalAmount.sub(fee);
+        uint256 fee = totalAmount * IMerchantMarketplace(marketplace).marketplaceFee() /  10000;
+        uint256 merchantAmount = totalAmount - fee;
 
         // Transfer fee to marketplace
         (bool success, ) = marketplace.call{value: fee}("");
         require(success, "Fee transfer failed");
 
         // Update stock
-        product.stock = product.stock.sub(quantity);
+        product.stock = product.stock- quantity;
 
         // Create purchase record
         purchases[nextPurchaseId] = Purchase({
@@ -210,7 +214,7 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
 
         // Refund excess payment
         if (msg.value > totalAmount) {
-            (success, ) = msg.sender.call{value: msg.value.sub(totalAmount)}("");
+            (success, ) = msg.sender.call{value: msg.value- totalAmount}("");
             require(success, "Refund transfer failed");
         }
 
@@ -227,15 +231,15 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
         uint256 totalAmount = uint256(product.price)*  quantity;
         require(msg.value >= totalAmount, "Insufficient payment");
 
-        uint256 fee = totalAmount*  MerchantMarketplace(marketplace).marketplaceFee() /  10000;
-        uint256 merchantAmount = totalAmount.sub(fee);
+        uint256 fee = totalAmount*  IMerchantMarketplace(marketplace).marketplaceFee() /  10000;
+        uint256 merchantAmount = totalAmount- fee;
 
         // Transfer fee to marketplace
         (bool success, ) = marketplace.call{value: fee}("");
         require(success, "Fee transfer failed");
 
         // Update stock
-        product.stock = product.stock.sub(quantity);
+        product.stock = product.stock- quantity;
 
         // Create purchase record
         purchases[nextPurchaseId] = Purchase({
@@ -264,7 +268,7 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
 
         // Refund excess payment
         if (msg.value > totalAmount) {
-            (success, ) = msg.sender.call{value: msg.value.sub(totalAmount)}("");
+            (success, ) = msg.sender.call{value: msg.value- totalAmount}("");
             require(success, "Refund transfer failed");
         }
 
@@ -286,7 +290,7 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
 
         uint128 contribution = uint128(msg.value) > maxContribution ? maxContribution : uint128(msg.value);
         if (uint256(groupBuy.totalContributed)+ contribution > product.price) {
-            contribution = uint128(uint256(product.price).sub(groupBuy.totalContributed));
+            contribution = uint128(uint256(product.price)- groupBuy.totalContributed);
         }
         require(contribution > 0, "Contribution too low");
 
@@ -297,7 +301,7 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
 
         // Refund excess contribution
         if (msg.value > contribution) {
-            (bool success, ) = msg.sender.call{value: msg.value.sub(contribution)}("");
+            (bool success, ) = msg.sender.call{value: msg.value- contribution}("");
             require(success, "Refund transfer failed");
         }
 
@@ -321,7 +325,7 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
 
         uint128 contribution = groupBuy.contributions[msg.sender];
         groupBuy.contributions[msg.sender] = 0;
-        groupBuy.totalContributed = groupBuy.totalContributed.sub(contribution);
+        groupBuy.totalContributed = groupBuy.totalContributed- contribution;
         groupBuy.participantCount--;
 
         // Remove participant
@@ -360,8 +364,8 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
 
         groupBuy.status = ProductTypes.GroupBuyingStatus.COMPLETED;
 
-        uint256 fee = uint256(groupBuy.totalContributed)* MerchantMarketplace(marketplace).marketplaceFee() /  10000;
-        uint256 merchantAmount = uint256(groupBuy.totalContributed).sub(fee);
+        uint256 fee = uint256(groupBuy.totalContributed)* IMerchantMarketplace(marketplace).marketplaceFee() /  10000;
+        uint256 merchantAmount = uint256(groupBuy.totalContributed)- fee;
 
         // Transfer fee to marketplace
         (bool success, ) = marketplace.call{value: fee}("");

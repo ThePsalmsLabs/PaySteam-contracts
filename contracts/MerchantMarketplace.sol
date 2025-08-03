@@ -4,18 +4,13 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "./MerchantContract.sol";
 
-// Interfaces and Libraries
-library ProductTypes {
-    enum ProductType { SINGLE, BULK, GROUP_BUYING }
-    enum PurchaseStatus { PENDING, COMPLETED, REFUNDED, EXPIRED }
-    enum GroupBuyingStatus { ACTIVE, COMPLETED, EXPIRED, CANCELLED }
-}
+
 
 // Main Marketplace Contract
 contract MerchantMarketplace is Ownable, ReentrancyGuard, Pausable {
-    using SafeMath for uint256;
+    
 
     struct MarketplaceListing {
         address merchantContract;
@@ -51,7 +46,7 @@ contract MerchantMarketplace is Ownable, ReentrancyGuard, Pausable {
         _;
     }
 
-    constructor() {
+    constructor()Ownable(msg.sender)  {
         _pause(); // Start paused for safety
     }
 
@@ -72,7 +67,7 @@ contract MerchantMarketplace is Ownable, ReentrancyGuard, Pausable {
         uint128 price,
         ProductTypes.ProductType productType
     ) external onlyRegisteredMerchant whenNotPaused {
-        require(MerchantContract(merchantContract).owner() == msg.sender, "Not your merchant contract");
+        require(MerchantContract(payable(merchantContract)).owner() == msg.sender, "Not your merchant contract");
         require(bytes(productName).length > 0, "Name cannot be empty");
         require(price > 0, "Price must be greater than 0");
 
@@ -94,7 +89,7 @@ contract MerchantMarketplace is Ownable, ReentrancyGuard, Pausable {
     function delistProduct(uint256 listingId) external whenNotPaused {
         MarketplaceListing storage listing = marketplaceListings[listingId];
         require(listing.isActive, "Product not active");
-        require(MerchantContract(listing.merchantContract).owner() == msg.sender, "Not authorized");
+        require(MerchantContract(payable(listing.merchantContract)).owner() == msg.sender, "Not authorized");
 
         listing.isActive = false;
         _removeActiveListing(listingId);
@@ -110,7 +105,7 @@ contract MerchantMarketplace is Ownable, ReentrancyGuard, Pausable {
 
     function confirmMarketplaceFee() external onlyOwner {
         require(feeChangeTimestamp > 0, "No fee change proposed");
-        require(block.timestamp >= feeChangeTimestamp.add(TIMELOCK_DELAY), "Timelock not elapsed");
+        require(block.timestamp >= feeChangeTimestamp +TIMELOCK_DELAY, "Timelock not elapsed");
         marketplaceFee = feeChangeProposed;
         feeChangeTimestamp = 0;
         emit MarketplaceFeeUpdated(marketplaceFee);
@@ -128,13 +123,14 @@ contract MerchantMarketplace is Ownable, ReentrancyGuard, Pausable {
         external view returns (MarketplaceListing[] memory) {
         require(limit <= 100, "Limit too high");
 
+
         if (offset >= activeListingIds.length) return new MarketplaceListing[](0);
 
-        uint256 resultLength = activeListingIds.length.sub(offset) > limit ? limit : activeListingIds.length.sub(offset);
+        uint256 resultLength = activeListingIds.length - offset > limit ? limit : activeListingIds.length - offset;
         MarketplaceListing[] memory result = new MarketplaceListing[](resultLength);
 
         for (uint256 i = 0; i < resultLength; i++) {
-            result[i] = marketplaceListings[activeListingIds[offset.add(i)]];
+            result[i] = marketplaceListings[activeListingIds[offset+i]];
         }
 
         return result;
