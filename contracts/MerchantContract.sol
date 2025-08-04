@@ -533,17 +533,17 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
     }
 
     // View Functions
-    function getProduct(uint256 productId) external view returns (Product memory) {
-        return products[productId];
-    }
+    // function getProduct(uint256 productId) external view returns (Product memory) {
+    //     return products[productId];
+    // }
 
-    function getProductReviews(uint256 productId) external view returns (Review[] memory) {
-        return productReviews[productId];
-    }
+    // function getProductReviews(uint256 productId) external view returns (Review[] memory) {
+    //     return productReviews[productId];
+    // }
 
-    function getUserPurchases(address user) external view returns (uint256[] memory) {
-        return userPurchases[user];
-    }
+    // function getUserPurchases(address user) external view returns (uint256[] memory) {
+    //     return userPurchases[user];
+    // }
 
     function getGroupBuyingInfo(uint256 productId) external view returns (
         uint128 totalContributed,
