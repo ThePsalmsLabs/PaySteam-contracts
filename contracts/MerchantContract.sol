@@ -32,7 +32,7 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
         uint32 maxGroupSize; // Optimized to uint32, max 1000
         uint256 groupBuyingDeadline;
         uint256 cashbackPercentage; // in basis points (100 = 1%)
-        uint128 bonanzaPrize; // Optimized to uint128
+        // uint128 bonanzaPrize; // Optimized to uint128
         bool isActive;
         uint256 createdAt;
     }
@@ -124,8 +124,8 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
         uint32 minGroupSize,
         uint32 maxGroupSize,
         uint256 groupBuyingDuration,
-        uint256 cashbackPercentage,
-        uint128 bonanzaPrize
+        uint256 cashbackPercentage
+        // uint128 bonanzaPrize
     ) external onlyOwner whenNotPaused {
         require(bytes(name).length > 0, "Name cannot be empty");
         require(price > 0, "Price must be greater than 0");
@@ -152,7 +152,7 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
             maxGroupSize: maxGroupSize,
             groupBuyingDeadline: deadline,
             cashbackPercentage: cashbackPercentage,
-            bonanzaPrize: bonanzaPrize,
+            // bonanzaPrize: bonanzaPrize,
             isActive: true,
             createdAt: block.timestamp
         });
@@ -210,7 +210,7 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
         }
 
         // Handle bonanza
-        _handleBonanza(productId, msg.sender);
+        // _handleBonanza(productId, msg.sender);
 
         // Refund excess payment
         if (msg.value > totalAmount) {
@@ -264,7 +264,7 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
         }
 
         // Handle bonanza
-        _handleBonanza(productId, msg.sender);
+        // _handleBonanza(productId, msg.sender);
 
         // Refund excess payment
         if (msg.value > totalAmount) {
@@ -404,7 +404,7 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
             }
 
             // Handle bonanza
-            _handleBonanza(productId, participant);
+            // _handleBonanza(productId, participant);
         }
 
         product.stock = 0; // All stock allocated
@@ -430,26 +430,26 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
         emit GroupBuyingCancelled(productId);
     }
 
-    function _handleBonanza(uint256 productId, address buyer) internal {
-        Product storage product = products[productId];
-        if (product.bonanzaPrize > 0) {
-            // Improved pseudo-randomness using nonce
-            randomNonce++;
-            uint256 random = uint256(keccak256(abi.encodePacked(
-                blockhash(block.number - 1),
-                block.timestamp,
-                buyer,
-                productId,
-                randomNonce
-            ))) % 100;
-            if (random < 5) {
-                (bool success, ) = buyer.call{value: product.bonanzaPrize}("");
-                if (success) {
-                    emit BonanzaWon(buyer, product.bonanzaPrize, productId);
-                }
-            }
-        }
-    }
+    // function _handleBonanza(uint256 productId, address buyer) internal {
+    //     Product storage product = products[productId];
+        // if (product.bonanzaPrize > 0) {
+        //     // Improved pseudo-randomness using nonce
+        //     randomNonce++;
+        //     uint256 random = uint256(keccak256(abi.encodePacked(
+        //         blockhash(block.number - 1),
+        //         block.timestamp,
+        //         buyer,
+        //         productId,
+        //         randomNonce
+        //     ))) % 100;
+        //     if (random < 5) {
+        //         (bool success, ) = buyer.call{value: product.bonanzaPrize}("");
+        //         if (success) {
+        //             emit BonanzaWon(buyer, product.bonanzaPrize, productId);
+        //         }
+        //     }
+        // }
+    // }
 
     // Review System
     function addReview(uint256 purchaseId, uint8 rating, string memory comment) 
@@ -497,8 +497,8 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
         string memory name,
         string memory description,
         uint128 price,
-        uint256 cashbackPercentage,
-        uint128 bonanzaPrize
+        uint256 cashbackPercentage
+        // uint128 bonanzaPrize
     ) external onlyOwner whenNotPaused {
         require(products[productId].isActive, "Product not active");
         require(bytes(name).length > 0, "Name cannot be empty");
@@ -510,7 +510,7 @@ contract MerchantContract is Ownable, ReentrancyGuard, Pausable {
         product.description = description;
         product.price = price;
         product.cashbackPercentage = cashbackPercentage;
-        product.bonanzaPrize = bonanzaPrize;
+        // product.bonanzaPrize = bonanzaPrize;
 
         emit ProductUpdated(productId, name, price);
     }
